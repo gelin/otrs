@@ -507,7 +507,7 @@ sub _CheckTicket {
     my $Ticket = $Param{Ticket};
 
     # check ticket internally
-    for my $Needed (qw(Title CustomerUser)) {
+    for my $Needed (qw(Title)) {
         if ( !$Ticket->{$Needed} ) {
             return {
                 ErrorCode    => 'TicketCreate.MissingParameter',
@@ -517,7 +517,13 @@ sub _CheckTicket {
     }
 
     # check Ticket->CustomerUser
-    if ( !$Self->{TicketCommonObject}->ValidateCustomer( %{$Ticket} ) ) {
+    if ( !$Ticket->{CustomerUser} && !$Ticket->{CustomerID} ) {
+        return {
+            ErrorCode    => 'TicketCreate.MissingParameter',
+            ErrorMessage => "TicketCreate: Ticket->CustomerUser or Ticket->CustomerID parameter is required!",
+        };
+    }
+    if ( $Ticket->{CustomerUser} && !$Self->{TicketCommonObject}->ValidateCustomer( %{$Ticket} ) ) {
         return {
             ErrorCode => 'TicketCreate.InvalidParameter',
             ErrorMessage =>
@@ -1118,6 +1124,9 @@ sub _TicketCreate {
     my %CustomerUserData = $Self->{CustomerUserObject}->CustomerUserDataGet(
         User => $Ticket->{CustomerUser},
     );
+    if ( $Ticket->{CustomerID} && $Ticket->{CustomerID} ne '') {
+        $CustomerUserData{UserCustomerID} = $Ticket->{CustomerID}
+    }
 
     my $OwnerID;
     if ( $Ticket->{Owner} && !$Ticket->{OwnerID} ) {
